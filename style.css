@@ -478,6 +478,13 @@ body {
     height: 85px;
     text-align: center;
     padding: 6px;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tool-item.selected-mobile {
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.45);
+    transform: scale(1.03);
 }
 
 .tool-item img {
@@ -627,7 +634,6 @@ body {
     .tool-item {
         height: 76px;
         padding: 6px;
-        touch-action: none;
     }
 
     .tool-item img {
