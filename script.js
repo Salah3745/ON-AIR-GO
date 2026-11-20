@@ -1,4 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const SUPABASE_URL = "https://vkjztxdrhohwrjavajtd.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vY9qU07jmb5GQYzF60HLGA_Ir4T7004";
+
     const playerModal = document.getElementById("playerModal");
     const playerNameInput = document.getElementById("playerNameInput");
     const startGameBtn = document.getElementById("startGameBtn");
@@ -40,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const finishBtn = document.getElementById("finishBtn");
 
     let currentScore = 0;
-    let selectedMobileItem = null; // لتخزين الأداة المختارة بالضغط على الموبايل
+    let selectedMobileItem = null;
 
     function clearSelectedMobileItem() {
         selectedMobileItem = null;
@@ -187,7 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // السحب باللمس يبدأ فقط بعد تحريك الإصبع لمسافة واضحة حتى لا يمنع السكرول العادي
     let touchState = null;
 
     function attachTouchInteraction(element, getMeta, onTap) {
@@ -216,9 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const dy = touch.clientY - touchState.startY;
             const distance = Math.hypot(dx, dy);
 
-            // لو الحركة أغلبها رأسية وبدأ السكرول في الصفحة قبل بدء السحب، نترك السكرول يعمل طبيعياً
             if (!touchState.isDragging && distance > 12) {
-                // نبدأ سحب العنصر فقط إذا أراد المستخدم سحبه بوضوح
                 touchState.isDragging = true;
                 const ghost = element.cloneNode(true);
                 ghost.style.position = "fixed";
@@ -289,7 +289,6 @@ document.addEventListener("DOMContentLoaded", () => {
         element.addEventListener("touchcancel", endTouch);
     }
 
-    // التنقل بين التبويبات
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
             tabs.forEach(t => t.classList.remove("active"));
@@ -302,7 +301,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // تفعيل السحب والضغط من القائمة الجانبية
     tools.forEach(tool => {
         tool.addEventListener("dragstart", (e) => {
             const itemElement = e.currentTarget;
@@ -381,7 +379,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return clone;
     }
 
-    // الإسقاط داخل الشاحنة (سحب أو ضغط بعد اختيار أداة)
     dropZones.forEach(zone => {
         zone.addEventListener("dragover", (e) => e.preventDefault());
 
@@ -404,7 +401,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // إزالة القطعة بسحبها أو بالضغط على القائمة الجانبية بعد اختيارها من داخل الشاحنة
     toolsSidebar.addEventListener("dragover", (e) => {
         e.preventDefault();
         toolsSidebar.classList.add("drag-over-remove");
@@ -439,6 +435,29 @@ document.addEventListener("DOMContentLoaded", () => {
         progressText.textContent = `${currentScore}%`;
     }
 
+    async function saveScoreToSupabase(playerName, score) {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/studio_scores`, {
+            method: "POST",
+            headers: {
+                "apikey": SUPABASE_PUBLISHABLE_KEY,
+                "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal"
+            },
+            body: JSON.stringify({
+                player_name: playerName || "Anonymous",
+                score: score
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `HTTP ${response.status}`);
+        }
+
+        return true;
+    }
+
     resetBtn.addEventListener("click", () => {
         currentScore = 0;
         clearSelectedMobileItem();
@@ -458,7 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
         syncZonesState();
     });
 
-    finishBtn.addEventListener("click", () => {
+    finishBtn.addEventListener("click", async () => {
         clearSelectedMobileItem();
         if (progressSection) {
             progressSection.style.display = "flex";
@@ -467,6 +486,15 @@ document.addEventListener("DOMContentLoaded", () => {
             scoreBoard.style.display = "block";
         }
         updateUI();
-        alert(`Great job ${currentPlayerName}! Your Studio Score is: ${currentScore}/100`);
+
+        const playerNameToSave = currentPlayerName || "Anonymous";
+
+        try {
+            await saveScoreToSupabase(playerNameToSave, currentScore);
+            alert(`Great job ${playerNameToSave}! Your Studio Score is: ${currentScore}/100\nScore saved to leaderboard!`);
+        } catch (err) {
+            console.error("Failed to save score to Supabase:", err);
+            alert(`Great job ${playerNameToSave}! Your Studio Score is: ${currentScore}/100\n(Note: Could not sync with server right now.)`);
+        }
     });
 });
