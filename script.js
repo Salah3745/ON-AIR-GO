@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const TELEGRAM_BOT_TOKEN = "9243756244:AAEoPfh81h7c39Hi35qRtma_jYxYi0RMsOk";
-    const TELEGRAM_CHAT_ID = "5337767950";
+    const TELEGRAM_CHAT_ID = "1491832117";
 
     const playerModal = document.getElementById("playerModal");
     const playerNameInput = document.getElementById("playerNameInput");
