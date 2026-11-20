@@ -533,8 +533,8 @@ body {
     color: #fff;
 }
 
-/* تحسين العرض على الموبايل في وضع Landscape */
-@media (max-width: 900px) and (orientation: landscape) {
+/* على الموبايل: الشاحنة بعرض الشاشة بالكامل والأدوات تحتها */
+@media (max-width: 900px) {
     body {
         height: auto;
         min-height: 100vh;
@@ -544,77 +544,105 @@ body {
 
     .top-bar {
         height: auto;
-        min-height: 48px;
-        padding: 6px 12px;
+        min-height: 50px;
+        padding: 8px 12px;
         flex-wrap: wrap;
         gap: 8px;
     }
 
     .logo img {
-        max-height: 32px;
+        max-height: 34px;
     }
 
     .game-container {
         flex: none;
-        flex-direction: row;
-        padding: 8px;
-        gap: 8px;
-        min-height: 320px;
+        flex-direction: column;
+        padding: 10px;
+        gap: 12px;
     }
 
     .van-workspace {
-        flex: 1.35;
-        min-height: 260px;
+        flex: none;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        min-height: 220px;
+    }
+
+    .drop-zone.wall-overlay-zone {
+        width: 8%;
+        height: 11%;
+    }
+
+    .drop-zone.wall-overlay-zone.has-ac {
+        width: 18%;
+        height: 16%;
+    }
+
+    .drop-zone.chair-zone {
+        width: 11%;
+        height: 18%;
+    }
+
+    .drop-zone.mic-between-zone {
+        width: 9%;
+        height: 18%;
+    }
+
+    .drop-zone.left-light-zone,
+    .drop-zone.right-camera-zone {
+        width: 8%;
+        height: 22%;
+    }
+
+    .drop-zone.right-camera-zone.with-beanbag {
+        width: 7%;
+        height: 17%;
     }
 
     .tools-sidebar {
-        flex: 1;
-        max-height: 72vh;
-        padding: 6px;
-        overflow-y: auto;
+        flex: none;
+        width: 100%;
+        max-height: none;
+        padding: 10px;
     }
 
     .tabs {
         grid-template-columns: repeat(3, 1fr);
-        gap: 4px;
-        margin-bottom: 6px;
-    }
-
-    .tabs .tab:last-child {
-        grid-column: auto;
+        gap: 6px;
+        margin-bottom: 10px;
     }
 
     .tab {
-        padding: 6px 4px;
-        font-size: 9px;
+        padding: 8px 6px;
+        font-size: 10px;
     }
 
     .tools-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-        overflow-y: auto;
-        max-height: 52vh;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        overflow-y: visible;
+        max-height: none;
     }
 
     .tool-item {
-        height: 68px;
-        padding: 4px;
+        height: 76px;
+        padding: 6px;
         touch-action: none;
     }
 
     .tool-item img {
-        width: 26px;
-        height: 26px;
+        width: 28px;
+        height: 28px;
     }
 
     .tool-item span {
-        font-size: 9px;
+        font-size: 10px;
     }
 
     .bottom-bar {
         height: auto;
-        min-height: 44px;
-        padding: 6px 12px;
+        min-height: 48px;
+        padding: 8px 12px;
         gap: 8px;
         flex-wrap: wrap;
     }
@@ -625,7 +653,7 @@ body {
     }
 
     .btn {
-        padding: 6px 12px;
+        padding: 7px 14px;
         font-size: 11px;
     }
 }
