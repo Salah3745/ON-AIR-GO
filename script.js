@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const STORAGE_KEY = "on_air_go_scores_v1";
+    const TELEGRAM_BOT_TOKEN = "9243756244:AAEoPfh81h7c39Hi35qRtma_jYxYi0RMsOk";
+    const TELEGRAM_CHAT_ID = "5337767950";
 
     const playerModal = document.getElementById("playerModal");
     const playerNameInput = document.getElementById("playerNameInput");
@@ -434,148 +435,29 @@ document.addEventListener("DOMContentLoaded", () => {
         progressText.textContent = `${currentScore}%`;
     }
 
-    function encodeScoreCode(record) {
-        const jsonStr = JSON.stringify(record);
-        const utf8Bytes = new TextEncoder().encode(jsonStr);
-        let binaryStr = "";
-        utf8Bytes.forEach(b => {
-            binaryStr += String.fromCharCode(b);
-        });
-        return "OAG1_" + btoa(binaryStr);
-    }
+    async function sendScoreToTelegram(playerName, score) {
+        const message =
+            `🎬 *ON AIR GO - New Score*\n` +
+            `👤 *Player:* ${playerName}\n` +
+            `🏆 *Score:* ${score} / 100\n` +
+            `🕒 *Time:* ${new Date().toLocaleString()}`;
 
-    function readStoredScores() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            const parsed = raw ? JSON.parse(raw) : [];
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
+        const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text: message,
+                parse_mode: "Markdown"
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(errText || `HTTP ${response.status}`);
         }
-    }
-
-    function saveScoreLocally(record) {
-        const list = readStoredScores();
-        const exists = list.some(item => item.id === record.id);
-        if (!exists) {
-            list.push(record);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-        }
-    }
-
-    function showShareCodeModal(playerName, score, code) {
-        const existing = document.getElementById("shareCodeModal");
-        if (existing) existing.remove();
-
-        const overlay = document.createElement("div");
-        overlay.id = "shareCodeModal";
-        overlay.style.cssText = `
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.82);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            padding: 16px;
-        `;
-
-        const box = document.createElement("div");
-        box.style.cssText = `
-            background: #141414;
-            border: 2px solid #2a2a2a;
-            border-radius: 10px;
-            max-width: 480px;
-            width: 100%;
-            padding: 20px;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        `;
-
-        const title = document.createElement("h3");
-        title.textContent = `Great job ${playerName}! Score: ${score}/100`;
-        title.style.cssText = "margin: 0 0 8px 0; font-size: 18px; color: #ffd700;";
-
-        const desc = document.createElement("p");
-        desc.textContent = "Saved locally on this device. Copy this code to share or paste into Leaderboard:";
-        desc.style.cssText = "margin: 0 0 12px 0; font-size: 13px; color: #bbb; line-height: 1.5;";
-
-        const textarea = document.createElement("textarea");
-        textarea.readOnly = true;
-        textarea.value = code;
-        textarea.style.cssText = `
-            width: 100%;
-            height: 76px;
-            background: #0b0b0b;
-            color: #fff;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 12px;
-            resize: none;
-            box-sizing: border-box;
-            margin-bottom: 12px;
-        `;
-
-        const actions = document.createElement("div");
-        actions.style.cssText = "display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;";
-
-        const copyBtn = document.createElement("button");
-        copyBtn.type = "button";
-        copyBtn.textContent = "Copy Code";
-        copyBtn.style.cssText = `
-            background: #ff2a2a;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            padding: 9px 14px;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-        `;
-
-        const closeBtn = document.createElement("button");
-        closeBtn.type = "button";
-        closeBtn.textContent = "Close";
-        closeBtn.style.cssText = `
-            background: #242424;
-            color: #fff;
-            border: 1px solid #3a3a3a;
-            border-radius: 6px;
-            padding: 9px 14px;
-            font-weight: bold;
-            font-size: 12px;
-            cursor: pointer;
-        `;
-
-        copyBtn.addEventListener("click", async () => {
-            textarea.select();
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(code);
-                } else {
-                    document.execCommand("copy");
-                }
-                copyBtn.textContent = "Copied!";
-            } catch {
-                document.execCommand("copy");
-                copyBtn.textContent = "Copied!";
-            }
-        });
-
-        closeBtn.addEventListener("click", () => overlay.remove());
-        overlay.addEventListener("click", (e) => {
-            if (e.target === overlay) overlay.remove();
-        });
-
-        actions.appendChild(copyBtn);
-        actions.appendChild(closeBtn);
-        box.appendChild(title);
-        box.appendChild(desc);
-        box.appendChild(textarea);
-        box.appendChild(actions);
-        overlay.appendChild(box);
-        document.body.appendChild(overlay);
     }
 
     resetBtn.addEventListener("click", () => {
@@ -597,7 +479,7 @@ document.addEventListener("DOMContentLoaded", () => {
         syncZonesState();
     });
 
-    finishBtn.addEventListener("click", () => {
+    finishBtn.addEventListener("click", async () => {
         clearSelectedMobileItem();
         if (progressSection) {
             progressSection.style.display = "flex";
@@ -608,15 +490,19 @@ document.addEventListener("DOMContentLoaded", () => {
         updateUI();
 
         const playerNameToSave = currentPlayerName || "Anonymous";
-        const record = {
-            id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            player_name: playerNameToSave,
-            score: currentScore,
-            created_at: new Date().toISOString()
-        };
+        finishBtn.disabled = true;
+        const originalText = finishBtn.textContent;
+        finishBtn.textContent = "SENDING...";
 
-        saveScoreLocally(record);
-        const shareCode = encodeScoreCode(record);
-        showShareCodeModal(playerNameToSave, currentScore, shareCode);
+        try {
+            await sendScoreToTelegram(playerNameToSave, currentScore);
+            alert(`تم إرسال نتيجة ${playerNameToSave} (${currentScore}/100) إلى تليجرام بنجاح!`);
+        } catch (err) {
+            console.error("Telegram send error:", err);
+            alert("تعذر إرسال النتيجة إلى تليجرام حالياً. تأكد من الاتصال والـ Chat ID.");
+        } finally {
+            finishBtn.disabled = false;
+            finishBtn.textContent = originalText;
+        }
     });
 });
