@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const playerNameInput = document.getElementById("playerNameInput");
     const startGameBtn = document.getElementById("startGameBtn");
     const displayPlayerName = document.getElementById("displayPlayerName");
-    
+
     let currentPlayerName = "";
 
     function startGame() {
@@ -127,6 +127,136 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function handleDropAction(zone, itemType, source, fromSpot) {
+        if (!zone || !itemType) return;
+
+        if (itemType === "podcast_table" && hasPlacedBeanBag()) {
+            alert("مينفعش تحط ترابيزة مع الـ Bean Bag عشان مش هيبقوا لايقين مع بعض!");
+            return;
+        }
+
+        if (zone.children.length === 0) {
+            const originalTool = document.querySelector(`.tools-grid [data-item="${itemType}"]`);
+
+            if (source === "sidebar" && originalTool && !originalTool.classList.contains("placed")) {
+                const clone = createPlacedClone(originalTool, itemType);
+                zone.appendChild(clone);
+
+                originalTool.classList.add("placed");
+                originalTool.style.opacity = "0.3";
+                originalTool.setAttribute("draggable", "false");
+
+                const itemPoints = parseInt(originalTool.dataset.points);
+                currentScore = Math.min(currentScore + itemPoints, 100);
+                updateUI();
+                syncZonesState();
+            } else if (source === "van") {
+                const oldZone = document.querySelector(`.drop-zone[data-spot="${fromSpot}"]`);
+                if (oldZone && oldZone.firstChild) {
+                    zone.appendChild(oldZone.firstChild);
+                    syncZonesState();
+                }
+            }
+        }
+    }
+
+    function handleRemoveToSidebar(itemType, fromSpot) {
+        const oldZone = document.querySelector(`.drop-zone[data-spot="${fromSpot}"]`);
+        const originalTool = document.querySelector(`.tools-grid [data-item="${itemType}"]`);
+
+        if (oldZone && originalTool) {
+            oldZone.innerHTML = "";
+            originalTool.classList.remove("placed");
+            originalTool.style.opacity = "1";
+            originalTool.setAttribute("draggable", "true");
+
+            const itemPoints = parseInt(originalTool.dataset.points);
+            currentScore = Math.max(currentScore - itemPoints, 0);
+            updateUI();
+            syncZonesState();
+        }
+    }
+
+    // دعم السحب باللمس (Touch) للأجهزة المحمولة
+    let activeTouchDrag = null;
+
+    function attachTouchDrag(element, getDragMeta) {
+        element.addEventListener("touchstart", (e) => {
+            if (e.touches.length !== 1) return;
+            const meta = getDragMeta();
+            if (!meta || meta.disabled) return;
+
+            const touch = e.touches[0];
+            const ghost = element.cloneNode(true);
+            ghost.style.position = "fixed";
+            ghost.style.left = `${touch.clientX - 35}px`;
+            ghost.style.top = `${touch.clientY - 35}px`;
+            ghost.style.width = "70px";
+            ghost.style.height = "70px";
+            ghost.style.zIndex = "9999";
+            ghost.style.pointerEvents = "none";
+            ghost.style.opacity = "0.9";
+            ghost.style.transform = "scale(1.05)";
+            document.body.appendChild(ghost);
+
+            activeTouchDrag = {
+                itemType: meta.itemType,
+                source: meta.source,
+                fromSpot: meta.fromSpot || "",
+                ghost
+            };
+        }, { passive: true });
+
+        element.addEventListener("touchmove", (e) => {
+            if (!activeTouchDrag || e.touches.length !== 1) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            activeTouchDrag.ghost.style.left = `${touch.clientX - 35}px`;
+            activeTouchDrag.ghost.style.top = `${touch.clientY - 35}px`;
+
+            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            const overSidebar = targetEl && toolsSidebar && toolsSidebar.contains(targetEl);
+            if (toolsSidebar) {
+                toolsSidebar.classList.toggle(
+                    "drag-over-remove",
+                    Boolean(overSidebar && activeTouchDrag.source === "van")
+                );
+            }
+        }, { passive: false });
+
+        function finishTouch(e) {
+            if (!activeTouchDrag) return;
+            const touch = (e.changedTouches && e.changedTouches[0]) || null;
+            const { itemType, source, fromSpot, ghost } = activeTouchDrag;
+
+            if (ghost && ghost.parentNode) {
+                ghost.parentNode.removeChild(ghost);
+            }
+            if (toolsSidebar) {
+                toolsSidebar.classList.remove("drag-over-remove");
+            }
+            activeTouchDrag = null;
+
+            if (!touch) return;
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (!dropTarget) return;
+
+            const targetZone = dropTarget.closest(".drop-zone");
+            if (targetZone) {
+                handleDropAction(targetZone, itemType, source, fromSpot);
+                return;
+            }
+
+            if (source === "van" && toolsSidebar && toolsSidebar.contains(dropTarget)) {
+                handleRemoveToSidebar(itemType, fromSpot);
+            }
+        }
+
+        element.addEventListener("touchend", finishTouch);
+        element.addEventListener("touchcancel", finishTouch);
+    }
+
     // التنقل بين التبويبات
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
@@ -152,6 +282,12 @@ document.addEventListener("DOMContentLoaded", () => {
         tool.addEventListener("dragend", (e) => {
             e.currentTarget.classList.remove("dragging");
         });
+
+        attachTouchDrag(tool, () => ({
+            itemType: tool.dataset.item,
+            source: "sidebar",
+            disabled: tool.classList.contains("placed")
+        }));
     });
 
     function createPlacedClone(originalTool, itemType) {
@@ -168,6 +304,13 @@ document.addEventListener("DOMContentLoaded", () => {
             e.dataTransfer.setData("fromSpot", clone.parentElement.dataset.spot);
         });
 
+        attachTouchDrag(clone, () => ({
+            itemType,
+            source: "van",
+            fromSpot: clone.parentElement ? clone.parentElement.dataset.spot : "",
+            disabled: false
+        }));
+
         return clone;
     }
 
@@ -179,37 +322,8 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const itemType = e.dataTransfer.getData("itemType");
             const source = e.dataTransfer.getData("source");
-
-            if (itemType === "podcast_table" && hasPlacedBeanBag()) {
-                alert("مينفعش تحط ترابيزة مع الـ Bean Bag عشان مش هيبقوا لايقين مع بعض!");
-                return;
-            }
-
-            if (zone.children.length === 0) {
-                const originalTool = document.querySelector(`.tools-grid [data-item="${itemType}"]`);
-                
-                if (source === "sidebar" && originalTool && !originalTool.classList.contains("placed")) {
-                    const clone = createPlacedClone(originalTool, itemType);
-                    zone.appendChild(clone);
-
-                    originalTool.classList.add("placed");
-                    originalTool.style.opacity = "0.3";
-                    originalTool.setAttribute("draggable", "false");
-
-                    const itemPoints = parseInt(originalTool.dataset.points);
-                    currentScore = Math.min(currentScore + itemPoints, 100);
-                    updateUI();
-                    syncZonesState();
-                } 
-                else if (source === "van") {
-                    const fromSpot = e.dataTransfer.getData("fromSpot");
-                    const oldZone = document.querySelector(`.drop-zone[data-spot="${fromSpot}"]`);
-                    if (oldZone && oldZone.firstChild) {
-                        zone.appendChild(oldZone.firstChild);
-                        syncZonesState();
-                    }
-                }
-            }
+            const fromSpot = e.dataTransfer.getData("fromSpot");
+            handleDropAction(zone, itemType, source, fromSpot);
         });
     });
 
@@ -231,21 +345,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (source === "van") {
             const itemType = e.dataTransfer.getData("itemType");
             const fromSpot = e.dataTransfer.getData("fromSpot");
-
-            const oldZone = document.querySelector(`.drop-zone[data-spot="${fromSpot}"]`);
-            const originalTool = document.querySelector(`.tools-grid [data-item="${itemType}"]`);
-
-            if (oldZone && originalTool) {
-                oldZone.innerHTML = "";
-                originalTool.classList.remove("placed");
-                originalTool.style.opacity = "1";
-                originalTool.setAttribute("draggable", "true");
-
-                const itemPoints = parseInt(originalTool.dataset.points);
-                currentScore = Math.max(currentScore - itemPoints, 0);
-                updateUI();
-                syncZonesState();
-            }
+            handleRemoveToSidebar(itemType, fromSpot);
         }
     });
 
