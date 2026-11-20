@@ -532,3 +532,100 @@ body {
     background: #ff2a2a;
     color: #fff;
 }
+
+/* تحسين العرض على الموبايل في وضع Landscape */
+@media (max-width: 900px) and (orientation: landscape) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .top-bar {
+        height: auto;
+        min-height: 48px;
+        padding: 6px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .logo img {
+        max-height: 32px;
+    }
+
+    .game-container {
+        flex: none;
+        flex-direction: row;
+        padding: 8px;
+        gap: 8px;
+        min-height: 320px;
+    }
+
+    .van-workspace {
+        flex: 1.35;
+        min-height: 260px;
+    }
+
+    .tools-sidebar {
+        flex: 1;
+        max-height: 72vh;
+        padding: 6px;
+        overflow-y: auto;
+    }
+
+    .tabs {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        margin-bottom: 6px;
+    }
+
+    .tabs .tab:last-child {
+        grid-column: auto;
+    }
+
+    .tab {
+        padding: 6px 4px;
+        font-size: 9px;
+    }
+
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        overflow-y: auto;
+        max-height: 52vh;
+    }
+
+    .tool-item {
+        height: 68px;
+        padding: 4px;
+        touch-action: none;
+    }
+
+    .tool-item img {
+        width: 26px;
+        height: 26px;
+    }
+
+    .tool-item span {
+        font-size: 9px;
+    }
+
+    .bottom-bar {
+        height: auto;
+        min-height: 44px;
+        padding: 6px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .bottom-bar p {
+        font-size: 10px;
+        letter-spacing: 0.3px;
+    }
+
+    .btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+}
