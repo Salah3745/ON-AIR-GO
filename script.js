@@ -448,22 +448,82 @@ document.addEventListener("DOMContentLoaded", () => {
         progressText.textContent = `${currentScore}%`;
     }
 
-    async function sendScoreToTelegram(playerName, score, durationText) {
-        const message =
+    function buildResultCaption(playerName, score, durationText) {
+        return (
             `🎬 *ON AIR GO - New Score*\n` +
             `👤 *Player:* ${playerName}\n` +
             `🏆 *Score:* ${score} / 100\n` +
             `⏱ *Time Taken:* ${durationText}\n` +
-            `🕒 *Finished At:* ${new Date().toLocaleString()}`;
+            `🕒 *Finished At:* ${new Date().toLocaleString()}`
+        );
+    }
 
+    async function captureStudioSnapshotBlob() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            return null;
+        }
+
+        let stream = null;
+        try {
+            stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { frameRate: 1 },
+                audio: false
+            });
+
+            const video = document.createElement("video");
+            video.srcObject = stream;
+            video.muted = true;
+            await video.play();
+
+            await new Promise((resolve) => {
+                if (video.readyState >= 2) {
+                    resolve();
+                } else {
+                    video.addEventListener("loadeddata", resolve, { once: true });
+                }
+            });
+
+            const targetEl = vanInterior || document.body;
+            const rect = targetEl.getBoundingClientRect();
+
+            const canvas = document.createElement("canvas");
+            const width = Math.max(1, Math.round(rect.width || video.videoWidth));
+            const height = Math.max(1, Math.round(rect.height || video.videoHeight));
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+            const scaleX = video.videoWidth / (window.innerWidth || width);
+            const scaleY = video.videoHeight / (window.innerHeight || height);
+
+            const sx = Math.max(0, Math.round((rect.left || 0) * scaleX));
+            const sy = Math.max(0, Math.round((rect.top || 0) * scaleY));
+            const sw = Math.min(video.videoWidth - sx, Math.max(1, Math.round(width * scaleX)));
+            const sh = Math.min(video.videoHeight - sy, Math.max(1, Math.round(height * scaleY)));
+
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, width, height);
+
+            return await new Promise((resolve) => {
+                canvas.toBlob((blob) => resolve(blob), "image/png", 0.92);
+            });
+        } catch (err) {
+            console.warn("Snapshot skipped/cancelled:", err);
+            return null;
+        } finally {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+    }
+
+    async function sendTextResultToTelegram(caption) {
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
         const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 chat_id: TELEGRAM_CHAT_ID,
-                text: message,
+                text: caption,
                 parse_mode: "Markdown"
             })
         });
@@ -472,6 +532,32 @@ document.addEventListener("DOMContentLoaded", () => {
             const errText = await response.text();
             throw new Error(errText || `HTTP ${response.status}`);
         }
+    }
+
+    async function sendScoreToTelegram(playerName, score, durationText) {
+        const caption = buildResultCaption(playerName, score, durationText);
+        const photoBlob = await captureStudioSnapshotBlob();
+
+        if (photoBlob) {
+            const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+            const formData = new FormData();
+            formData.append("chat_id", TELEGRAM_CHAT_ID);
+            formData.append("photo", photoBlob, `${playerName.replace(/\s+/g, "_")}_studio.png`);
+            formData.append("caption", caption);
+            formData.append("parse_mode", "Markdown");
+
+            const photoResponse = await fetch(photoUrl, {
+                method: "POST",
+                body: formData
+            });
+
+            if (photoResponse.ok) {
+                return { withPhoto: true };
+            }
+        }
+
+        await sendTextResultToTelegram(caption);
+        return { withPhoto: false };
     }
 
     resetBtn.addEventListener("click", () => {
@@ -512,8 +598,12 @@ document.addEventListener("DOMContentLoaded", () => {
         finishBtn.textContent = "SENDING...";
 
         try {
-            await sendScoreToTelegram(playerNameToSave, currentScore, durationText);
-            alert(`تم إرسال نتيجة ${playerNameToSave} (${currentScore}/100) في وقت ${durationText} إلى تليجرام بنجاح!`);
+            const result = await sendScoreToTelegram(playerNameToSave, currentScore, durationText);
+            if (result.withPhoto) {
+                alert(`تم إرسال نتيجة ${playerNameToSave} (${currentScore}/100) في وقت ${durationText} مع صورة الاستوديو إلى تليجرام بنجاح!`);
+            } else {
+                alert(`تم إرسال نتيجة ${playerNameToSave} (${currentScore}/100) في وقت ${durationText} إلى تليجرام بنجاح!`);
+            }
         } catch (err) {
             console.error("Telegram send error:", err);
             alert("تعذر إرسال النتيجة إلى تليجرام حالياً. تأكد من الاتصال والـ Chat ID.");
