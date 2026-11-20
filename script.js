@@ -8,6 +8,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const displayPlayerName = document.getElementById("displayPlayerName");
 
     let currentPlayerName = "";
+    let gameStartTime = Date.now();
+
+    function formatDuration(elapsedMs) {
+        const totalSeconds = Math.max(0, Math.round(elapsedMs / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        if (minutes === 0) {
+            return `${seconds}s`;
+        }
+        return `${minutes}m ${seconds}s`;
+    }
 
     function startGame() {
         const name = playerNameInput.value.trim();
@@ -17,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         currentPlayerName = name;
+        gameStartTime = Date.now();
         displayPlayerName.textContent = currentPlayerName;
         playerModal.style.display = "none";
     }
@@ -435,12 +448,13 @@ document.addEventListener("DOMContentLoaded", () => {
         progressText.textContent = `${currentScore}%`;
     }
 
-    async function sendScoreToTelegram(playerName, score) {
+    async function sendScoreToTelegram(playerName, score, durationText) {
         const message =
             `🎬 *ON AIR GO - New Score*\n` +
             `👤 *Player:* ${playerName}\n` +
             `🏆 *Score:* ${score} / 100\n` +
-            `🕒 *Time:* ${new Date().toLocaleString()}`;
+            `⏱ *Time Taken:* ${durationText}\n` +
+            `🕒 *Finished At:* ${new Date().toLocaleString()}`;
 
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
@@ -462,6 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resetBtn.addEventListener("click", () => {
         currentScore = 0;
+        gameStartTime = Date.now();
         clearSelectedMobileItem();
         if (progressSection) {
             progressSection.style.display = "none";
@@ -490,13 +505,15 @@ document.addEventListener("DOMContentLoaded", () => {
         updateUI();
 
         const playerNameToSave = currentPlayerName || "Anonymous";
+        const durationText = formatDuration(Date.now() - gameStartTime);
+
         finishBtn.disabled = true;
         const originalText = finishBtn.textContent;
         finishBtn.textContent = "SENDING...";
 
         try {
-            await sendScoreToTelegram(playerNameToSave, currentScore);
-            alert(`تم إرسال نتيجة ${playerNameToSave} (${currentScore}/100) إلى تليجرام بنجاح!`);
+            await sendScoreToTelegram(playerNameToSave, currentScore, durationText);
+            alert(`تم إرسال نتيجة ${playerNameToSave} (${currentScore}/100) في وقت ${durationText} إلى تليجرام بنجاح!`);
         } catch (err) {
             console.error("Telegram send error:", err);
             alert("تعذر إرسال النتيجة إلى تليجرام حالياً. تأكد من الاتصال والـ Chat ID.");
