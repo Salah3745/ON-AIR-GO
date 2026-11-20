@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On Air Go - Studio Build</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- نافذة تسجيل اسم اللاعب -->
+    <div class="modal-overlay" id="playerModal">
+        <div class="modal-box">
+            <h2>WELCOME TO <span>ON AIR GO</span></h2>
+            <p>Enter your name to start building your mobile studio</p>
+            <input type="text" id="playerNameInput" placeholder="Your Name / Nickname..." autocomplete="off">
+            <button class="btn start-btn" id="startGameBtn">START BUILDING</button>
+        </div>
+    </div>
+
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <div class="logo">
+            <img src="images/On Air Go Live Anywhere Logo.png" alt="On Air Go Live Anywhere Logo">
+        </div>
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <span>STUDIO BUILD</span>
+            <div class="progress-bar-container">
+                <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+            </div>
+            <span id="progressText">0%</span>
+        </div>
+        <div class="player-info">
+            <span class="player-tag">👤 <span id="displayPlayerName">Guest</span></span>
+            <div class="score-board" id="scoreBoard" style="display: none;">⭐ <span id="scoreVal">0</span>/100</div>
+        </div>
+    </header>
+
+    <!-- منطقة اللعب الرئيسية -->
+    <main class="game-container">
+        
+        <!-- مساحة الشاحنة (اليسار) -->
+        <section class="van-workspace">
+            <div class="van-interior">
+                <!-- 1. منطقة الخلفية الكاملة بحجم حائط الـ Van بالكامل -->
+                <div class="drop-zone full-wall-zone" data-spot="1" style="top: 47.5%; left: 62%;"></div>
+
+                <!-- 2. الصف العلوي (3 مناطق) التي تظهر فوق الحائط بعد إضافة عنصر في المنطقة الكبيرة -->
+                <div class="drop-zone wall-overlay-zone" data-spot="2" style="top: 39%; left: 52.5%;"></div>
+                <div class="drop-zone wall-overlay-zone" data-spot="3" style="top: 39%; left: 62%;"></div>
+                <div class="drop-zone wall-overlay-zone" data-spot="4" style="top: 39%; left: 71.5%;"></div>
+
+                <!-- 3. الصف السفلي (3 مناطق) تحت المناطق 2 و 3 و 4 -->
+                <div class="drop-zone wall-overlay-zone" data-spot="9" style="top: 46.5%; left: 52.5%;"></div>
+                <div class="drop-zone wall-overlay-zone" data-spot="10" style="top: 46.5%; left: 62%;"></div>
+                <div class="drop-zone wall-overlay-zone" data-spot="11" style="top: 46.5%; left: 71.5%;"></div>
+
+                <!-- 4. المناطق السفلية على الخطوط المحددة على أرضية الـ Van -->
+                <!-- الخط 1: وحدة الإضاءة على الشمال -->
+                <div class="drop-zone left-light-zone" data-spot="8" style="top: 56%; left: 45%;"></div>
+                <!-- الكاميرا/الوحدة على اليمين خلف الكرسي الأيمن -->
+                <div class="drop-zone right-camera-zone" data-spot="12" style="top: 57%; left: 77%;"></div>
+
+                <!-- الخط 2: الكرسي الأيسر -->
+                <div class="drop-zone chair-zone" data-spot="5" style="top: 61.5%; left: 54.5%;"></div>
+
+                <!-- الخط 3: الترابيزة / الميكروفون في المنتصف -->
+                <div class="drop-zone mic-between-zone" data-spot="7" style="top: 62.5%; left: 63%;"></div>
+
+                <!-- الخط 4: الكرسي الأيمن -->
+                <div class="drop-zone chair-zone" data-spot="6" style="top: 61.5%; left: 71.5%;"></div>
+            </div>
+        </section>
+
+        <!-- قائمة الأدوات الجانبية (اليمين) -->
+        <aside class="tools-sidebar">
+            <div class="tabs">
+                <button class="tab active" data-category="audio">AUDIO</button>
+                <button class="tab" data-category="video">VIDEO</button>
+                <button class="tab" data-category="lighting">LIGHTING</button>
+                <button class="tab" data-category="set">SET & FURNITURE</button>
+                <button class="tab" data-category="tech">WORKSTATION & TECH</button>
+            </div>
+            
+            <div class="tools-grid">
+                <!-- 1. قسم الصوت (AUDIO) -->
+                <div class="tool-item" draggable="true" data-item="mic" data-category="audio" data-points="10">
+                    <img src="images/mic.png" alt="Microphone">
+                    <span>Shure Mic & Arm</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="mixer" data-category="audio" data-points="10">
+                    <img src="images/mixer.png" alt="Audio Mixer">
+                    <span>Audio Mixer</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="headphones" data-category="audio" data-points="5">
+                    <img src="images/headphones.png" alt="Headphones">
+                    <span>Headphones</span>
+                </div>
+
+                <!-- 2. قسم الفيديو (VIDEO) -->
+                <div class="tool-item" draggable="true" data-item="camera" data-category="video" data-points="10" style="display: none;">
+                    <img src="images/Camera.png" alt="Camera">
+                    <span>Mirrorless Camera</span>
+                </div>
+                
+                <div class="tool-item" draggable="true" data-item="teleprompter" data-category="video" data-points="5" style="display: none;">
+                    <img src="images/tv.png" alt="Teleprompter">
+                    <span>Tv</span>
+                </div>
+                
+                <!-- 3. قسم الإضاءة (LIGHTING) -->
+                <div class="tool-item" draggable="true" data-item="led_light" data-category="lighting" data-points="10" style="display: none;">
+                    <img src="images/light X.png" alt="LED Panel">
+                    <span>LED Panels</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="softbox" data-category="lighting" data-points="5" style="display: none;">
+                    <img src="images/onair.png" alt="Softbox">
+                    <span>ON AIR sign</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="rgb_tubes" data-category="lighting" data-points="5" style="display: none;">
+                    <img src="images/light ring.png" alt="RGB Tubes">
+                    <span>Light Ring</span>
+                </div>
+                
+                <!-- 4. قسم الديكور والأثاث (SET & FURNITURE) -->
+                <div class="tool-item" draggable="true" data-item="podcast_table" data-category="set" data-points="10" style="display: none;">
+                    <img src="images/table.png" alt="Podcast Table">
+                    <span>Podcast Table</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="chair_1" data-category="set" data-points="5" style="display: none;">
+                    <img src="images/chair.png" alt="Chair 1">
+                    <span>Studio Chair 1</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="chair_2" data-category="set" data-points="5" style="display: none;">
+                    <img src="images/chair 2.png" alt="Chair 2">
+                    <span>Studio Chair 2</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="foam" data-category="set" data-points="5" style="display: none;">
+                    <img src="images/foam.png" alt="Acoustic Panels">
+                    <span>Acoustic Panels</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="neon_sign" data-category="set" data-points="5" style="display: none;">
+                    <img src="images/green.png" alt="green screen">
+                    <span>Green Screen</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="benbag" data-category="set" data-points="5" style="display: none;">
+                    <img src="images/benbag.png" alt="Ben Bag">
+                    <span>Ben Bag</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="benbagII" data-category="set" data-points="5" style="display: none;">
+                    <img src="images/benbagII.png" alt="Ben Bag">
+                    <span>Ben Bag 2</span>
+                </div>
+
+                <!-- 5. قسم الأجهزة والأساسيات (WORKSTATION & TECH) -->
+                <div class="tool-item" draggable="true" data-item="workstation" data-category="tech" data-points="10" style="display: none;">
+                    <img src="images/cd II.jfif" alt="Editing PC & Monitors">
+                    <span>Editing PC & 2 Monitors</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="ac" data-category="tech" data-points="5" style="display: none;">
+                    <img src="images/AIR_CONDITIONER-removebg-preview.png" alt="Air Conditioner">
+                    <span>Air Conditioner</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="router" data-category="tech" data-points="5" style="display: none;">
+                    <img src="images/CD.png" alt="Internet Router">
+                    <span>Internet Router</span>
+                </div>
+                <div class="tool-item" draggable="true" data-item="cables" data-category="tech" data-points="5" style="display: none;">
+                    <img src="images/Headphone.png" alt="Cables & Power">
+                    <span>headphone</span>
+                </div>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- الشريط السفلي -->
+    <footer class="bottom-bar">
+        <button class="btn reset-btn">RESET</button>
+        <p>DRAG ITEMS INTO THE VAN TO BUILD YOUR STUDIO</p>
+        <button class="btn finish-btn" id="finishBtn">FINISH STUDIO</button>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

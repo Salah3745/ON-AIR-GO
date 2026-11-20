@@ -1,0 +1,534 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #0b0b0b;
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* الشريط العلوي */
+.top-bar {
+    height: 60px;
+    background-color: #141414;
+    border-bottom: 2px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.logo img {
+    max-height: 46px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.progress-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.progress-bar-container {
+    width: 200px;
+    height: 10px;
+    background: #333;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #ff2a2a;
+    transition: width 0.3s ease;
+}
+
+/* معلومات اللاعب والنتيجة */
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.player-tag {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #fff;
+    font-weight: bold;
+}
+
+.score-board {
+    background: #222;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+/* نافذة تسجيل الدخول */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-box {
+    background: #141414;
+    border: 2px solid #ff2a2a;
+    border-radius: 12px;
+    padding: 30px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 0 25px rgba(255, 42, 42, 0.3);
+}
+
+.modal-box h2 {
+    font-size: 22px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.modal-box h2 span {
+    color: #ff2a2a;
+}
+
+.modal-box p {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 20px;
+}
+
+.modal-box input {
+    width: 100%;
+    padding: 12px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 15px;
+    margin-bottom: 15px;
+    outline: none;
+    text-align: center;
+}
+
+.modal-box input:focus {
+    border-color: #ff2a2a;
+}
+
+.start-btn {
+    width: 100%;
+    padding: 12px;
+    background: #ff2a2a;
+    color: #fff;
+    font-size: 14px;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+}
+
+.start-btn:hover {
+    background: #d91e1e;
+}
+
+/* مساحة اللعب */
+.game-container {
+    flex: 1;
+    display: flex;
+    padding: 15px;
+    gap: 15px;
+}
+
+/* مساحة الشاحنة بصورتك الخاصة */
+.van-workspace {
+    flex: 2;
+    background-image: url('images/van.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: #0d0d0d;
+    border: 2px solid #333;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.van-interior {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* التنسيق العام لمناطق الإسقاط */
+.drop-zone {
+    position: absolute;
+    border: 1.5px dashed rgba(255, 42, 42, 0.75);
+    border-radius: 6px;
+    transform: translate(-50%, -50%);
+    background: rgba(20, 20, 20, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, width 0.25s ease, height 0.25s ease, top 0.25s ease, left 0.25s ease;
+    z-index: 10;
+}
+
+.drop-zone:hover {
+    border-color: #ff2a2a;
+    background: rgba(255, 42, 42, 0.15);
+}
+
+/* 1. إخفاء الحدود والخلفية بمجرد إضافة عنصر داخل أي drop-zone */
+.drop-zone.has-item {
+    border: none !important;
+    background: transparent !important;
+}
+
+/* 2. منطقة الحائط الكبيرة بحجم حيطة الـ Van بالكامل */
+.drop-zone.full-wall-zone {
+    width: 34.5%;
+    height: 36.5%;
+    z-index: 1;
+    background: rgba(20, 20, 20, 0.15);
+}
+
+/* امتداد الـ Green Screen ليتوقف عند حافة الأرضية الداخلية للشاحنة بدون خروج للخارج */
+.drop-zone.full-wall-zone.has-green-screen {
+    width: 35%;
+    height: 43%;
+    top: 50.5% !important;
+    z-index: 2;
+}
+
+/* رفع التلفزيون / الشاشة لأعلى على الحائط بشكل واقعي */
+.drop-zone.full-wall-zone.has-tv-screen {
+    width: 34.5%;
+    height: 34%;
+    top: 44% !important;
+    z-index: 2;
+}
+
+.drop-zone.full-wall-zone.has-tv-screen .tool-item img {
+    object-fit: contain !important;
+}
+
+/* 3. المناطق التي تظهر فوق الحائط بعد إضافة العنصر الكبير (الصف العلوي والسفلي) */
+.drop-zone.wall-overlay-zone {
+    width: 56px;
+    height: 48px;
+    display: none;
+    z-index: 10;
+}
+
+.drop-zone.wall-overlay-zone.visible {
+    display: flex;
+}
+
+/* عند وضع Green Screen أو TV أو Screen: إخفاء المنطقتين الأوسطتين (3 و 10) */
+.van-interior.screen-mode .drop-zone[data-spot="3"],
+.van-interior.screen-mode .drop-zone[data-spot="10"] {
+    display: none !important;
+}
+
+/* عند وضع Green Screen أو TV أو Screen: نقل المناطق الجانبية إلى المواضع المحددة يمين وشمال */
+.van-interior.screen-mode .drop-zone[data-spot="2"] {
+    top: 41% !important;
+    left: 48.5% !important;
+    z-index: 14;
+}
+
+.van-interior.screen-mode .drop-zone[data-spot="9"] {
+    top: 49% !important;
+    left: 48.5% !important;
+    z-index: 14;
+}
+
+.van-interior.screen-mode .drop-zone[data-spot="4"] {
+    top: 41% !important;
+    left: 75.5% !important;
+    z-index: 14;
+}
+
+.van-interior.screen-mode .drop-zone[data-spot="11"] {
+    top: 49% !important;
+    left: 75.5% !important;
+    z-index: 14;
+}
+
+/* إذا وُضع التكييف في أي منطقة من المناطق العلوية يكبر ويعرض */
+.drop-zone.wall-overlay-zone.has-ac {
+    width: 155px;
+    height: 82px;
+    z-index: 13;
+}
+
+/* 4. منطقتا الكراسي الكبيرتان على الخطوط الأرضية (أعلى من الكاميرا الخلفية) */
+.drop-zone.chair-zone {
+    width: 116px;
+    height: 100px;
+    z-index: 12;
+}
+
+/* منطقة الميكروفون والترابيزة بين الكرسيين على الخط الأوسط */
+.drop-zone.mic-between-zone {
+    width: 92px;
+    height: 105px;
+    z-index: 15;
+}
+
+/* منطقة الإضاءة اليسرى */
+.drop-zone.left-light-zone {
+    width: 84px;
+    height: 130px;
+    border-radius: 6px;
+    z-index: 14;
+}
+
+/* منطقة الكاميرا: الوضع الأولي خلف الكرسي الأيمن */
+.drop-zone.right-camera-zone {
+    width: 84px;
+    height: 130px;
+    border-radius: 6px;
+    z-index: 8;
+}
+
+/* منطقة الكاميرا: عند وجود Bean Bag تستقر جنبها على الأرضية بشكل متوازن */
+.drop-zone.right-camera-zone.with-beanbag {
+    top: 59.5% !important;
+    left: 75.5% !important;
+    width: 66px;
+    height: 96px;
+    z-index: 16;
+}
+
+/* شكل الأداة بعد وضعها داخل منطقة الإسقاط */
+.drop-zone .tool-item {
+    cursor: grab !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drop-zone .tool-item span {
+    display: none;
+}
+
+.drop-zone .tool-item img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.95));
+}
+
+/* تكبير وعرض التكييف داخل أي منطقة علوية يوضع فيها */
+.drop-zone.wall-overlay-zone.has-ac .tool-item img {
+    width: 140% !important;
+    height: 130% !important;
+    object-fit: contain;
+}
+
+/* العنصر داخل الحائط الكبير يملأ الطول والعرض بالكامل */
+.drop-zone.full-wall-zone .tool-item img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: fill !important;
+    filter: none;
+}
+
+/* ضبط الكراسي داخل مناطقها لتستقر على الأرضية */
+.drop-zone.chair-zone .tool-item img {
+    width: 125% !important;
+    height: 125% !important;
+    transform: translateY(-8px);
+}
+
+/* ضبط الترابيزة أو الميكروفون بين الكرسيين على الأرضية */
+.drop-zone.mic-between-zone .tool-item img {
+    width: 130% !important;
+    height: 120% !important;
+    object-fit: contain;
+    transform: translateY(-6px);
+}
+
+/* حجم وحدة الإضاءة اليسرى */
+.drop-zone.left-light-zone .tool-item img {
+    width: 105% !important;
+    height: 105% !important;
+    object-fit: contain;
+    transform: translateY(-2px);
+}
+
+/* حجم الكاميرا: الوضع الأولي خلف الكرسي */
+.drop-zone.right-camera-zone .tool-item img {
+    width: 105% !important;
+    height: 105% !important;
+    object-fit: contain;
+    transform: translateY(-2px);
+}
+
+/* حجم الكاميرا: عند وجود Bean Bag */
+.drop-zone.right-camera-zone.with-beanbag .tool-item img {
+    width: 88% !important;
+    height: 88% !important;
+    object-fit: contain;
+    transform: translateY(2px);
+}
+
+/* قائمة الأدوات الجانبية */
+.tools-sidebar {
+    flex: 1;
+    background: #141414;
+    border: 2px solid #222;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    transition: border-color 0.2s;
+}
+
+.tools-sidebar.drag-over-remove {
+    border-color: #ff2a2a;
+    background: #1d1212;
+}
+
+/* تنسيق التبويبات الـ 5 بشكل متناسق */
+.tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.tabs .tab:last-child {
+    grid-column: span 2;
+}
+
+.tab {
+    background: #222;
+    border: none;
+    color: #aaa;
+    padding: 8px;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.tab.active {
+    background: #ff2a2a;
+    color: #fff;
+}
+
+.tools-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    overflow-y: auto;
+    align-content: start;
+}
+
+/* تصميم الأداة والأيقونة */
+.tool-item {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    cursor: grab;
+    height: 85px;
+    text-align: center;
+    padding: 6px;
+}
+
+.tool-item img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.tool-item span {
+    font-size: 10px;
+    color: #ccc;
+    line-height: 1.2;
+}
+
+.tool-item:active {
+    cursor: grabbing;
+}
+
+/* الشريط السفلي */
+.bottom-bar {
+    height: 50px;
+    background: #141414;
+    border-top: 2px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.bottom-bar p {
+    font-size: 12px;
+    color: #777;
+    letter-spacing: 1px;
+}
+
+.btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.reset-btn {
+    background: #333;
+    color: #fff;
+}
+
+.finish-btn {
+    background: #ff2a2a;
+    color: #fff;
+}
