@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     const SUPABASE_URL = "https://vkjztxdrhohwrjavajtd.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_vY9qU07jmb5GQYzF60HLGA_Ir4T7004";
+    const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZremp0eGRyaG9od3JqYXZhanRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNzg0MjAsImV4cCI6MjExMDc1NDQyMH0.P9zzHaveDXmTLRtlmBgaFwZ31blE5KTdIBisE2E4Vpk";
 
     const playerModal = document.getElementById("playerModal");
     const playerNameInput = document.getElementById("playerNameInput");
