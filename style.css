@@ -169,7 +169,7 @@ body {
 /* مساحة الشاحنة بصورتك الخاصة */
 .van-workspace {
     flex: 2;
-    background-image: url('images/van.png');
+    background-image: url('van.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
