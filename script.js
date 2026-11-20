@@ -40,6 +40,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const finishBtn = document.getElementById("finishBtn");
 
     let currentScore = 0;
+    let selectedMobileItem = null; // لتخزين الأداة المختارة بالضغط على الموبايل
+
+    function clearSelectedMobileItem() {
+        selectedMobileItem = null;
+        document.querySelectorAll(".tool-item.selected-mobile").forEach(el => {
+            el.classList.remove("selected-mobile");
+        });
+    }
 
     function getWallItemCategory(itemEl) {
         if (!itemEl) return null;
@@ -81,7 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    // تحديث حالة الحدود، ظهور المناطق العلوية، حجم التكييف والـ Green Screen / TV، وتوزيع المناطق
     function syncZonesState() {
         dropZones.forEach(zone => {
             const placedItem = zone.querySelector(".tool-item");
@@ -150,11 +157,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentScore = Math.min(currentScore + itemPoints, 100);
                 updateUI();
                 syncZonesState();
+                clearSelectedMobileItem();
             } else if (source === "van") {
                 const oldZone = document.querySelector(`.drop-zone[data-spot="${fromSpot}"]`);
                 if (oldZone && oldZone.firstChild) {
                     zone.appendChild(oldZone.firstChild);
                     syncZonesState();
+                    clearSelectedMobileItem();
                 }
             }
         }
@@ -174,61 +183,77 @@ document.addEventListener("DOMContentLoaded", () => {
             currentScore = Math.max(currentScore - itemPoints, 0);
             updateUI();
             syncZonesState();
+            clearSelectedMobileItem();
         }
     }
 
-    // دعم السحب باللمس (Touch) للأجهزة المحمولة
-    let activeTouchDrag = null;
+    // السحب باللمس يبدأ فقط بعد تحريك الإصبع لمسافة واضحة حتى لا يمنع السكرول العادي
+    let touchState = null;
 
-    function attachTouchDrag(element, getDragMeta) {
+    function attachTouchInteraction(element, getMeta, onTap) {
         element.addEventListener("touchstart", (e) => {
             if (e.touches.length !== 1) return;
-            const meta = getDragMeta();
+            const meta = getMeta();
             if (!meta || meta.disabled) return;
 
             const touch = e.touches[0];
-            const ghost = element.cloneNode(true);
-            ghost.style.position = "fixed";
-            ghost.style.left = `${touch.clientX - 35}px`;
-            ghost.style.top = `${touch.clientY - 35}px`;
-            ghost.style.width = "70px";
-            ghost.style.height = "70px";
-            ghost.style.zIndex = "9999";
-            ghost.style.pointerEvents = "none";
-            ghost.style.opacity = "0.9";
-            ghost.style.transform = "scale(1.05)";
-            document.body.appendChild(ghost);
-
-            activeTouchDrag = {
+            touchState = {
+                startX: touch.clientX,
+                startY: touch.clientY,
+                isDragging: false,
+                ghost: null,
                 itemType: meta.itemType,
                 source: meta.source,
                 fromSpot: meta.fromSpot || "",
-                ghost
+                element
             };
         }, { passive: true });
 
         element.addEventListener("touchmove", (e) => {
-            if (!activeTouchDrag || e.touches.length !== 1) return;
-            e.preventDefault();
-
+            if (!touchState || e.touches.length !== 1) return;
             const touch = e.touches[0];
-            activeTouchDrag.ghost.style.left = `${touch.clientX - 35}px`;
-            activeTouchDrag.ghost.style.top = `${touch.clientY - 35}px`;
+            const dx = touch.clientX - touchState.startX;
+            const dy = touch.clientY - touchState.startY;
+            const distance = Math.hypot(dx, dy);
 
-            const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-            const overSidebar = targetEl && toolsSidebar && toolsSidebar.contains(targetEl);
-            if (toolsSidebar) {
-                toolsSidebar.classList.toggle(
-                    "drag-over-remove",
-                    Boolean(overSidebar && activeTouchDrag.source === "van")
-                );
+            // لو الحركة أغلبها رأسية وبدأ السكرول في الصفحة قبل بدء السحب، نترك السكرول يعمل طبيعياً
+            if (!touchState.isDragging && distance > 12) {
+                // نبدأ سحب العنصر فقط إذا أراد المستخدم سحبه بوضوح
+                touchState.isDragging = true;
+                const ghost = element.cloneNode(true);
+                ghost.style.position = "fixed";
+                ghost.style.left = `${touch.clientX - 35}px`;
+                ghost.style.top = `${touch.clientY - 35}px`;
+                ghost.style.width = "70px";
+                ghost.style.height = "70px";
+                ghost.style.zIndex = "9999";
+                ghost.style.pointerEvents = "none";
+                ghost.style.opacity = "0.92";
+                ghost.style.transform = "scale(1.05)";
+                document.body.appendChild(ghost);
+                touchState.ghost = ghost;
+            }
+
+            if (touchState.isDragging && touchState.ghost) {
+                e.preventDefault();
+                touchState.ghost.style.left = `${touch.clientX - 35}px`;
+                touchState.ghost.style.top = `${touch.clientY - 35}px`;
+
+                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                const overSidebar = targetEl && toolsSidebar && toolsSidebar.contains(targetEl);
+                if (toolsSidebar) {
+                    toolsSidebar.classList.toggle(
+                        "drag-over-remove",
+                        Boolean(overSidebar && touchState.source === "van")
+                    );
+                }
             }
         }, { passive: false });
 
-        function finishTouch(e) {
-            if (!activeTouchDrag) return;
+        function endTouch(e) {
+            if (!touchState) return;
+            const { isDragging, ghost, itemType, source, fromSpot } = touchState;
             const touch = (e.changedTouches && e.changedTouches[0]) || null;
-            const { itemType, source, fromSpot, ghost } = activeTouchDrag;
 
             if (ghost && ghost.parentNode) {
                 ghost.parentNode.removeChild(ghost);
@@ -236,7 +261,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (toolsSidebar) {
                 toolsSidebar.classList.remove("drag-over-remove");
             }
-            activeTouchDrag = null;
+            touchState = null;
+
+            if (!isDragging) {
+                if (typeof onTap === "function") {
+                    onTap();
+                }
+                return;
+            }
 
             if (!touch) return;
             const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -253,8 +285,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        element.addEventListener("touchend", finishTouch);
-        element.addEventListener("touchcancel", finishTouch);
+        element.addEventListener("touchend", endTouch);
+        element.addEventListener("touchcancel", endTouch);
     }
 
     // التنقل بين التبويبات
@@ -270,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // تفعيل السحب من القائمة
+    // تفعيل السحب والضغط من القائمة الجانبية
     tools.forEach(tool => {
         tool.addEventListener("dragstart", (e) => {
             const itemElement = e.currentTarget;
@@ -283,11 +315,28 @@ document.addEventListener("DOMContentLoaded", () => {
             e.currentTarget.classList.remove("dragging");
         });
 
-        attachTouchDrag(tool, () => ({
-            itemType: tool.dataset.item,
-            source: "sidebar",
-            disabled: tool.classList.contains("placed")
-        }));
+        attachTouchInteraction(
+            tool,
+            () => ({
+                itemType: tool.dataset.item,
+                source: "sidebar",
+                disabled: tool.classList.contains("placed")
+            }),
+            () => {
+                if (tool.classList.contains("placed")) return;
+                if (selectedMobileItem && selectedMobileItem.itemType === tool.dataset.item && selectedMobileItem.source === "sidebar") {
+                    clearSelectedMobileItem();
+                    return;
+                }
+                clearSelectedMobileItem();
+                tool.classList.add("selected-mobile");
+                selectedMobileItem = {
+                    itemType: tool.dataset.item,
+                    source: "sidebar",
+                    fromSpot: ""
+                };
+            }
+        );
     });
 
     function createPlacedClone(originalTool, itemType) {
@@ -304,17 +353,35 @@ document.addEventListener("DOMContentLoaded", () => {
             e.dataTransfer.setData("fromSpot", clone.parentElement.dataset.spot);
         });
 
-        attachTouchDrag(clone, () => ({
-            itemType,
-            source: "van",
-            fromSpot: clone.parentElement ? clone.parentElement.dataset.spot : "",
-            disabled: false
-        }));
+        attachTouchInteraction(
+            clone,
+            () => ({
+                itemType,
+                source: "van",
+                fromSpot: clone.parentElement ? clone.parentElement.dataset.spot : "",
+                disabled: false
+            }),
+            () => {
+                const spot = clone.parentElement ? clone.parentElement.dataset.spot : "";
+                if (!spot) return;
+                if (selectedMobileItem && selectedMobileItem.source === "van" && selectedMobileItem.fromSpot === spot) {
+                    clearSelectedMobileItem();
+                    return;
+                }
+                clearSelectedMobileItem();
+                clone.classList.add("selected-mobile");
+                selectedMobileItem = {
+                    itemType,
+                    source: "van",
+                    fromSpot: spot
+                };
+            }
+        );
 
         return clone;
     }
 
-    // الإسقاط داخل الشاحنة
+    // الإسقاط داخل الشاحنة (سحب أو ضغط بعد اختيار أداة)
     dropZones.forEach(zone => {
         zone.addEventListener("dragover", (e) => e.preventDefault());
 
@@ -325,9 +392,19 @@ document.addEventListener("DOMContentLoaded", () => {
             const fromSpot = e.dataTransfer.getData("fromSpot");
             handleDropAction(zone, itemType, source, fromSpot);
         });
+
+        zone.addEventListener("click", () => {
+            if (!selectedMobileItem) return;
+            handleDropAction(
+                zone,
+                selectedMobileItem.itemType,
+                selectedMobileItem.source,
+                selectedMobileItem.fromSpot
+            );
+        });
     });
 
-    // إزالة القطعة بسحبها للقائمة الجانبية
+    // إزالة القطعة بسحبها أو بالضغط على القائمة الجانبية بعد اختيارها من داخل الشاحنة
     toolsSidebar.addEventListener("dragover", (e) => {
         e.preventDefault();
         toolsSidebar.classList.add("drag-over-remove");
@@ -349,6 +426,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    toolsSidebar.addEventListener("click", (e) => {
+        if (e.target.closest(".tool-item")) return;
+        if (selectedMobileItem && selectedMobileItem.source === "van") {
+            handleRemoveToSidebar(selectedMobileItem.itemType, selectedMobileItem.fromSpot);
+        }
+    });
+
     function updateUI() {
         scoreVal.textContent = currentScore;
         progressFill.style.width = `${currentScore}%`;
@@ -357,6 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     resetBtn.addEventListener("click", () => {
         currentScore = 0;
+        clearSelectedMobileItem();
         if (progressSection) {
             progressSection.style.display = "none";
         }
@@ -374,6 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     finishBtn.addEventListener("click", () => {
+        clearSelectedMobileItem();
         if (progressSection) {
             progressSection.style.display = "flex";
         }
