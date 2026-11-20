@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const SUPABASE_URL = "https://vkjztxdrhohwrjavajtd.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZremp0eGRyaG9od3JqYXZhanRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUxNzg0MjAsImV4cCI6MjExMDc1NDQyMH0.P9zzHaveDXmTLRtlmBgaFwZ31blE5KTdIBisE2E4Vpk";
+    const STORAGE_KEY = "on_air_go_scores_v1";
 
     const playerModal = document.getElementById("playerModal");
     const playerNameInput = document.getElementById("playerNameInput");
@@ -435,27 +434,148 @@ document.addEventListener("DOMContentLoaded", () => {
         progressText.textContent = `${currentScore}%`;
     }
 
-    async function saveScoreToSupabase(playerName, score) {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/studio_scores`, {
-            method: "POST",
-            headers: {
-                "apikey": SUPABASE_PUBLISHABLE_KEY,
-                "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal"
-            },
-            body: JSON.stringify({
-                player_name: playerName || "Anonymous",
-                score: score
-            })
+    function encodeScoreCode(record) {
+        const jsonStr = JSON.stringify(record);
+        const utf8Bytes = new TextEncoder().encode(jsonStr);
+        let binaryStr = "";
+        utf8Bytes.forEach(b => {
+            binaryStr += String.fromCharCode(b);
+        });
+        return "OAG1_" + btoa(binaryStr);
+    }
+
+    function readStoredScores() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function saveScoreLocally(record) {
+        const list = readStoredScores();
+        const exists = list.some(item => item.id === record.id);
+        if (!exists) {
+            list.push(record);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        }
+    }
+
+    function showShareCodeModal(playerName, score, code) {
+        const existing = document.getElementById("shareCodeModal");
+        if (existing) existing.remove();
+
+        const overlay = document.createElement("div");
+        overlay.id = "shareCodeModal";
+        overlay.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.82);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 16px;
+        `;
+
+        const box = document.createElement("div");
+        box.style.cssText = `
+            background: #141414;
+            border: 2px solid #2a2a2a;
+            border-radius: 10px;
+            max-width: 480px;
+            width: 100%;
+            padding: 20px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        `;
+
+        const title = document.createElement("h3");
+        title.textContent = `Great job ${playerName}! Score: ${score}/100`;
+        title.style.cssText = "margin: 0 0 8px 0; font-size: 18px; color: #ffd700;";
+
+        const desc = document.createElement("p");
+        desc.textContent = "Saved locally on this device. Copy this code to share or paste into Leaderboard:";
+        desc.style.cssText = "margin: 0 0 12px 0; font-size: 13px; color: #bbb; line-height: 1.5;";
+
+        const textarea = document.createElement("textarea");
+        textarea.readOnly = true;
+        textarea.value = code;
+        textarea.style.cssText = `
+            width: 100%;
+            height: 76px;
+            background: #0b0b0b;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 12px;
+            resize: none;
+            box-sizing: border-box;
+            margin-bottom: 12px;
+        `;
+
+        const actions = document.createElement("div");
+        actions.style.cssText = "display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;";
+
+        const copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.textContent = "Copy Code";
+        copyBtn.style.cssText = `
+            background: #ff2a2a;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 9px 14px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+        `;
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.textContent = "Close";
+        closeBtn.style.cssText = `
+            background: #242424;
+            color: #fff;
+            border: 1px solid #3a3a3a;
+            border-radius: 6px;
+            padding: 9px 14px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+        `;
+
+        copyBtn.addEventListener("click", async () => {
+            textarea.select();
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(code);
+                } else {
+                    document.execCommand("copy");
+                }
+                copyBtn.textContent = "Copied!";
+            } catch {
+                document.execCommand("copy");
+                copyBtn.textContent = "Copied!";
+            }
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `HTTP ${response.status}`);
-        }
+        closeBtn.addEventListener("click", () => overlay.remove());
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
 
-        return true;
+        actions.appendChild(copyBtn);
+        actions.appendChild(closeBtn);
+        box.appendChild(title);
+        box.appendChild(desc);
+        box.appendChild(textarea);
+        box.appendChild(actions);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
     }
 
     resetBtn.addEventListener("click", () => {
@@ -477,7 +597,7 @@ document.addEventListener("DOMContentLoaded", () => {
         syncZonesState();
     });
 
-    finishBtn.addEventListener("click", async () => {
+    finishBtn.addEventListener("click", () => {
         clearSelectedMobileItem();
         if (progressSection) {
             progressSection.style.display = "flex";
@@ -488,13 +608,15 @@ document.addEventListener("DOMContentLoaded", () => {
         updateUI();
 
         const playerNameToSave = currentPlayerName || "Anonymous";
+        const record = {
+            id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            player_name: playerNameToSave,
+            score: currentScore,
+            created_at: new Date().toISOString()
+        };
 
-        try {
-            await saveScoreToSupabase(playerNameToSave, currentScore);
-            alert(`Great job ${playerNameToSave}! Your Studio Score is: ${currentScore}/100\nScore saved to leaderboard!`);
-        } catch (err) {
-            console.error("Failed to save score to Supabase:", err);
-            alert(`Great job ${playerNameToSave}! Your Studio Score is: ${currentScore}/100\n(Note: Could not sync with server right now.)`);
-        }
+        saveScoreLocally(record);
+        const shareCode = encodeScoreCode(record);
+        showShareCodeModal(playerNameToSave, currentScore, shareCode);
     });
 });
